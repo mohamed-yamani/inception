@@ -1,0 +1,145 @@
+version: "3"
+
+services:
+  nginx:
+    build: requirements/nginx
+    image: nginx
+    container_name: nginx
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - myamaninetwork
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress:/var/www/wordpress:rw
+  
+  mysql:
+    build: requirements/mariadb
+    image: mariadb
+    container_name: mysql
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - myamaninetwork
+    volumes:
+      - mariadb:/var/lib/mysql
+  
+  wordpress:
+    build: requirements/wordpress/
+    image: wordpress
+    container_name: wordpress
+    restart: always
+    networks:
+      - myamaninetwork
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    volumes:
+      - wordpress:/var/www/wordpress:rw
+
+  redis:
+    build: requirements/bonus/redis
+    container_name: redis
+    image: redis
+    restart: always
+    depends_on:
+      - nginx
+    ports:
+      - "6379:6379"
+    networks:
+      - myamaninetwork
+    
+  website:
+      container_name: website
+      image: website
+      restart: always
+      build: ./requirements/bonus/website/
+      ports:
+        - '1337:1337'
+      env_file:
+        - .env
+      networks:
+        - myamaninetwork
+  
+  ftp:
+    build: requirements/bonus/ftp
+    image: ftp
+    container_name: ftp
+    restart: always
+    depends_on:
+      - wordpress
+    env_file:
+      - .env
+    networks:
+      - myamaninetwork
+    ports:
+      - "21:21"
+    volumes:
+      - wordpress:/home/${FTP_USER}
+
+  adminer:
+    build: requirements/bonus/adminer
+    image: adminer
+    container_name: adminer
+    depends_on:
+      - mysql
+    volumes:
+      - mariadb:/var/lib/mysql
+    restart: always
+    networks:
+      - myamaninetwork
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+
+  cadvisor:
+    container_name: cadvisor
+    build: requirements/bonus/cadvisor
+    image: cadvisor
+    env_file:
+      - .env
+    ports:
+      - "7000:7000"
+    networks:
+        - myamaninetwork
+    restart: always
+
+
+
+### docker volumes used by the containers to store and share date ###
+### o: bind
+volumes:
+    wordpress:
+              driver: local
+              driver_opts:
+                      device: /Users/myamani/data/wp
+                      o: bind
+                      type: none
+    mariadb:
+            driver: local
+            driver_opts:
+                    device: /Users/myamani/data/db
+                    o: bind
+                    type: none  
+
+### docker network used to connect all containers together ###
+networks:
+  myamaninetwork:
+    driver: bridge
+
+### NGINX is open source software for web serving, reverse proxying, caching, load balancing, media streaming, and more. ###
+### WordPress is the simplest, most popular way to create your own website or blog. ###
+### docker-compose is a file that contains the configuration for your docker project. ###
+### docker network is a network that you can use to connect containers together. ###
+### docker volume is a volume that you can use to share data between containers. ###
+### cadvisor is a container that can be used to monitor the system. ###
+### mariadb is a container that can be used to store data. ###
+### adminer is a container that can be used to manage databases. ###
+### File transfer protocol is a way to download, upload, and transfer files from one location to another on the internet and between computer systems. ###
+### bridge networks are best when you need multiple containers to communicate on the same Docker host. ###
+# docker-compose up -d --no-deps --build website 
